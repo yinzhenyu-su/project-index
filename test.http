@@ -1,0 +1,7 @@
+@token=1HxzrsZYLCyw8x65wSzW
+GET http://192.168.1.21/api/v4/projects HTTP/1.1
+PRIVATE-TOKEN: {{token}}
+
+###
+GET http://192.168.1.21/findsoft/ppcw/badges/main/pipeline.svg HTTP/1.1
+PRIVATE-TOKEN: {{token}}

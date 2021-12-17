@@ -1,0 +1,165 @@
+<head>
+  <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/edge/css/common/ui/Table.css">
+  <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/edge/css/common/comp/Table.css">
+  <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/edge/css/common/ui/Loading.css">
+  <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/edge/css/common/color.css">
+</head>
+<div class="content">
+  <h1>哲寻项目流水线</h1>
+  <div class="table-x">
+    <!-- 列表 -->
+    <table id="p-table" class="ui-table">
+      <thead>
+        <tr>
+          <td>项目名称</td>
+          <td>项目介绍</td>
+          <td>打包时间</td>
+          <td>打包状态</td>
+        </tr>
+      </thead>
+      <tbody>
+
+      </tbody>
+    </table>
+    <!-- 列表无数据的占位 -->
+    <div class="table-null-x"></div>
+    <!-- 列表加载loading，依赖Loading.css -->
+    <ui-loading rows="15"></ui-loading>
+    <!-- <div class="ui-loading"></div> -->
+    <!-- 底部分页 -->
+    <div class="table-page-x"></div>
+</div>
+  
+</div>
+<style>
+  .content {
+    display: block;
+    width: 50%;
+    text-align: center;
+    margin: auto;
+  }
+</style>
+<script src="https://cdn.bootcdn.net/ajax/libs/axios/0.21.1/axios.js"></script>
+<script src="https://unpkg.com/dayjs@1.8.21/dayjs.min.js"></script>
+<script src="https://qidian.gtimg.com/lulu/edge/js/common/ui/Loading.js"></script>
+<script>
+  // created, waiting_for_resource, preparing, pending, running, success, failed, canceled, skipped, manual, scheduled
+  function createBadage(status) {
+    let back = 'bdbdbd'
+    if (status === 'success') back = '4c1'
+    if (status === 'failed') back = 'e00'
+    if (status === 'pending') back = 'c89d19'
+    let tmpl = `<svg xmlns="http://www.w3.org/2000/svg" width="116" height="20">
+  <linearGradient id="b" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+
+  <mask id="a">
+    <rect width="116" height="20" rx="3" fill="#fff"/>
+  </mask>
+
+  <g mask="url(#a)">
+    <path fill="#555"
+          d="M0 0 h62 v20 H0 z"/>
+    <path fill="#${back}"
+          d="M62 0 h54 v20 H62 z"/>
+    <path fill="url(#b)"
+          d="M0 0 h116 v20 H0 z"/>
+  </g>
+
+  <g fill="#fff" text-anchor="middle">
+    <g font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="11">
+      <text x="31" y="15" fill="#010101" fill-opacity=".3">
+        pipeline
+      </text>
+      <text x="31" y="14">
+        pipeline
+      </text>
+      <text x="89" y="15" fill="#010101" fill-opacity=".3">
+        ${status}
+      </text>
+      <text x="89" y="14">
+        ${status}
+      </text>
+    </g>
+  </g>
+</svg>`
+return tmpl
+  }
+  document.onreadystatechange = async (e) => {
+    if (document.readyState === 'complete') {
+      let projects = [];
+      const gitlabApi = axios.create({
+        baseURL: 'http://192.168.1.21',
+        timeout: 2000,
+        headers: { 'PRIVATE-TOKEN': '{{.gitlabToken}}'}
+      })
+      const localApi = axios.create({
+        baseURL: '',
+        timeout: 2000,
+      })
+      let localDirs = []
+      // 获取可跳转的项目数据
+      try {
+        const { data } = await localApi.get('./projects');
+        localDirs = data
+      } catch(e) {
+        console.log({...e})
+      }
+
+      function isProjectCanTest(projectName) {
+        return localDirs.some(d=> d.Name===projectName)
+      }
+
+      const table = document.querySelector('#p-table tbody')
+
+      async function getPiplines(p) {
+        try {
+            const { data } = await gitlabApi.get(`./api/v4/projects/${p.id}/pipelines?per_page=2`);
+            p.pipelines = data || []
+            return Promise.resolve(p.pipelines)
+          } catch (e) {
+            console.log({...e})
+            return Promise.resolve([])
+          }
+      }
+
+      async function getProjects() {
+        const { data } = await gitlabApi.get('./api/v4/projects/?per_page=500')
+        projects = data || []
+        let frontEnd = projects.filter(p => ['back-end','lab'].indexOf(p.namespace.name) < 0 && !p.empty_repo && p.path)
+        await Promise.all(frontEnd.map((d) => getPiplines(d)))
+        frontEnd = frontEnd.filter(d => d.pipelines && d.pipelines.length)
+        frontEnd.sort((a,b) => ('' + a.path).localeCompare(b.path));
+        console.log(frontEnd)
+        frontEnd.forEach(p => {
+          const tr = document.createElement('tr')
+            const tdName = document.createElement('td')
+            if (isProjectCanTest(p.path)) {
+              const link = document.createElement('a')
+              link.href = p.path
+              link.innerText = p.path
+              tdName.appendChild(link)
+            } else {
+              tdName.innerText = p.path
+            }
+            const tdDesc = document.createElement('td')
+            tdDesc.innerText = p.description
+            const tdPackageUpdatedTime = document.createElement('td')
+            const tdPackageStatus = document.createElement('td')
+            
+            const last = p.pipelines[0]
+            tdPackageUpdatedTime.innerText = dayjs(last.updated_at).format('YYYY-MM-DD HH:mm:ss');
+            tdPackageStatus.innerHTML = createBadage(last.status);
+            tr.append(tdName, tdDesc, tdPackageUpdatedTime, tdPackageStatus)
+            table.appendChild(tr)
+        })
+        document.querySelector('ui-loading').remove()
+        return data
+      }
+      getProjects();
+    }
+  }
+  // document.querySelector()
+</script>
