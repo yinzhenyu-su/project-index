@@ -1,6 +1,7 @@
 package service
 
 import (
+	"embed"
 	"html/template"
 	"os"
 	"sort"
@@ -10,6 +11,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+//go:embed templates/*
+var f embed.FS
 
 // 获取文件、文件夹信息
 func getDirInfo(args string) []IndexFileType {
@@ -44,13 +48,14 @@ func ParseTime(t time.Time) string {
 
 func Router(gitlabToken string, dir string) {
 	r := gin.Default()
+	templ := template.Must(template.New("").ParseFS(f, "templates/*"))
+	r.SetHTMLTemplate(templ)
 	r.SetFuncMap(template.FuncMap{"parseTime": ParseTime})
-	r.LoadHTMLGlob("template/*")
 	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.html", gin.H{"dirs": getDirInfo(dir), "gitlabToken": gitlabToken})
 	})
 	r.GET("/projects", func(c *gin.Context) {
 		c.JSON(http.StatusOK, getDirInfo(dir))
 	})
-	r.Run()
+	r.Run(":8080")
 }
