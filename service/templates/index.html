@@ -176,6 +176,7 @@ return tmpl
             if (isProjectCanTest(p.path)) {
               const link = document.createElement('a')
               link.href = p.path
+              link.target = '_blank'
               link.innerText = p.path
               tdName.appendChild(link)
             } else {
