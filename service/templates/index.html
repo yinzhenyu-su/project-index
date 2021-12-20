@@ -127,13 +127,14 @@ return tmpl
       }
 
       async function getProjects() {
-        const { data } = await gitlabApi.get('./api/v4/projects/?per_page=500')
+        const { data } = await gitlabApi.get('./api/v4/projects/?per_page=200&with_programming_language=vue')
         projects = data || []
         let frontEnd = projects.filter(p => ['back-end','lab'].indexOf(p.namespace.name) < 0 && !p.empty_repo && p.path)
         await Promise.all(frontEnd.map((d) => getPiplines(d)))
         frontEnd = frontEnd.filter(d => d.pipelines && d.pipelines.length)
         frontEnd.sort((a,b) => ('' + a.path).localeCompare(b.path));
         console.log(frontEnd)
+        const newTrs = []
         frontEnd.forEach(p => {
           const tr = document.createElement('tr')
             const tdName = document.createElement('td')
@@ -154,12 +155,26 @@ return tmpl
             tdPackageUpdatedTime.innerText = dayjs(last.updated_at).format('YYYY-MM-DD HH:mm:ss');
             tdPackageStatus.innerHTML = createBadage(last.status);
             tr.append(tdName, tdDesc, tdPackageUpdatedTime, tdPackageStatus)
-            table.appendChild(tr)
+            newTrs.push(tr)
         })
-        document.querySelector('ui-loading').remove()
+        const oldTrs = document.querySelectorAll('#p-table tbody tr');
+        if (oldTrs) {
+          Array.from(oldTrs).forEach(d => {
+            d.remove();
+          })
+        }
+        newTrs.forEach((d) => {
+          table.appendChild(d)
+        })
+        if (document.querySelector('ui-loading')) {
+          document.querySelector('ui-loading').remove()
+        }
         return data
       }
-      getProjects();
+
+      setInterval(() => {
+        getProjects();
+      }, 1000 * 3)
     }
   }
   // document.querySelector()
