@@ -12,5 +12,6 @@
 *.out
 .DS_Store
 pindex
+project-index
 # Dependency directories (remove the comment below to include it)
 # vendor/

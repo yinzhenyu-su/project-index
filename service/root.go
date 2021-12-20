@@ -16,7 +16,7 @@ import (
 var f embed.FS
 
 // 获取文件、文件夹信息
-func getDirInfo(args string) []IndexFileType {
+func getFilesInfo(args string) []IndexFileType {
 	var indexFileTypeList []IndexFileType
 	var dot = "."
 	entry, err := os.ReadDir(args)
@@ -52,10 +52,13 @@ func Router(gitlabToken string, dir string) {
 	r.SetHTMLTemplate(templ)
 	r.SetFuncMap(template.FuncMap{"parseTime": ParseTime})
 	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{"dirs": getDirInfo(dir), "gitlabToken": gitlabToken})
+		c.HTML(http.StatusOK, "index.html", gin.H{"dirs": getFilesInfo(dir), "gitlabToken": gitlabToken})
+	})
+	r.GET("/files", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"files": getFilesInfo(dir)})
 	})
 	r.GET("/projects", func(c *gin.Context) {
-		c.JSON(http.StatusOK, getDirInfo(dir))
+		c.JSON(http.StatusOK, getFilesInfo(dir))
 	})
 	r.Run(":8080")
 }
