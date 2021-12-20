@@ -1,11 +1,19 @@
 <head>
   <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/edge/css/common/ui/Table.css">
   <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/edge/css/common/comp/Table.css">
+  <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/pure/css/common/ui/LightTip.css">
   <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/edge/css/common/ui/Loading.css">
   <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/edge/css/common/color.css">
+  <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/pure/css/common/ui/Checkbox.css">
+  <link rel="stylesheet" href="https://qidian.gtimg.com/lulu/pure/css/common/ui/Switch.css">
 </head>
 <div class="content">
   <h1>哲寻项目流水线</h1>
+  <form style="text-align: left;">
+    <label for="autoRefresh" style="vertical-align: middle;">自动刷新：</label>
+    <input type="checkbox" id="autoRefresh" checked onchange="onAutoRefreshChange(this)">
+    <label class="ui-switch" for="autoRefresh" style="vertical-align: middle;"></label>
+  </form>
   <div class="table-x">
     <!-- 列表 -->
     <table id="p-table" class="ui-table">
@@ -15,6 +23,7 @@
           <td>项目介绍</td>
           <td>打包时间</td>
           <td>打包状态</td>
+          <td>后端状态</td>
         </tr>
       </thead>
       <tbody>
@@ -41,6 +50,7 @@
 </style>
 <script src="https://cdn.bootcdn.net/ajax/libs/axios/0.21.1/axios.js"></script>
 <script src="https://unpkg.com/dayjs@1.8.21/dayjs.min.js"></script>
+<script src="https://qidian.gtimg.com/lulu/pure/js/common/ui/LightTip.js"></script>
 <script src="https://qidian.gtimg.com/lulu/edge/js/common/ui/Loading.js"></script>
 <script>
   // created, waiting_for_resource, preparing, pending, running, success, failed, canceled, skipped, manual, scheduled
@@ -88,6 +98,8 @@
 </svg>`
 return tmpl
   }
+  
+  
   document.onreadystatechange = async (e) => {
     if (document.readyState === 'complete') {
       let projects = [];
@@ -100,6 +112,11 @@ return tmpl
         baseURL: '',
         timeout: 2000,
       })
+      const backApi = axios.create({
+        baseURL: {{if eq .mode "release"}}'./'{{else}}'http://192.168.1.63'{{end}},
+        timeout: 2000,
+      })
+      const backProjects = ['ae', 'eg', 'ppcw', 'dcaw', 'hm', 'perm', 'gis', 'hero', 'pmcp', 'policy', 'prisi', 'ropo']
       let localDirs = []
       // 获取可跳转的项目数据
       try {
@@ -109,8 +126,23 @@ return tmpl
         console.log({...e})
       }
 
+      let autoRefresh = true;
+      let autoRefreshHandler = 0
+  
+      function onAutoRefreshChange(target) {
+        autoRefresh = target.checked
+        clearInterval(autoRefreshHandler)
+        if (target.checked) {
+          autoRefreshHandler = setInterval(() => {
+            getProjects();
+          }, 1000 * 5)
+        }
+      }
+
+      window.onAutoRefreshChange = onAutoRefreshChange
+
       function isProjectCanTest(projectName) {
-        return localDirs.some(d=> d.Name===projectName)
+        return localDirs.some((d) => d.Name===projectName)
       }
 
       const table = document.querySelector('#p-table tbody')
@@ -133,9 +165,12 @@ return tmpl
         await Promise.all(frontEnd.map((d) => getPiplines(d)))
         frontEnd = frontEnd.filter(d => d.pipelines && d.pipelines.length)
         frontEnd.sort((a,b) => ('' + a.path).localeCompare(b.path));
-        console.log(frontEnd)
+        
         const newTrs = []
-        frontEnd.forEach(p => {
+
+        for(let i=0;i<frontEnd.length;i++) {
+          const p = frontEnd[i];
+
           const tr = document.createElement('tr')
             const tdName = document.createElement('td')
             if (isProjectCanTest(p.path)) {
@@ -154,9 +189,19 @@ return tmpl
             const last = p.pipelines[0]
             tdPackageUpdatedTime.innerText = dayjs(last.updated_at).format('YYYY-MM-DD HH:mm:ss');
             tdPackageStatus.innerHTML = createBadage(last.status);
-            tr.append(tdName, tdDesc, tdPackageUpdatedTime, tdPackageStatus)
+            const tdBackStatus = document.createElement('td')
+            try {
+              const backNameIndex = backProjects.findIndex(d=> p.path.indexOf(d) > -1)
+              const { data } = await backApi.get(`./${backProjects[backNameIndex]}/version/get`)
+              p.backApiVersion = data;
+              tdBackStatus.innerHTML = `<span class="green">正常（svn：${data.version}）</span>`
+            } catch(e) {
+              p.backApiVersion = {};
+              tdBackStatus.innerHTML = '<span class="red">挂了（或未配置）</span>'
+            }
+            tr.append(tdName, tdDesc, tdPackageUpdatedTime, tdPackageStatus, tdBackStatus)
             newTrs.push(tr)
-        })
+        }
         const oldTrs = document.querySelectorAll('#p-table tbody tr');
         if (oldTrs) {
           Array.from(oldTrs).forEach(d => {
@@ -172,9 +217,7 @@ return tmpl
         return data
       }
 
-      setInterval(() => {
-        getProjects();
-      }, 1000 * 3)
+      onAutoRefreshChange({checked: true})
     }
   }
   // document.querySelector()

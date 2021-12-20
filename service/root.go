@@ -52,7 +52,7 @@ func Router(gitlabToken string, dir string) {
 	r.SetHTMLTemplate(templ)
 	r.SetFuncMap(template.FuncMap{"parseTime": ParseTime})
 	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{"dirs": getFilesInfo(dir), "gitlabToken": gitlabToken})
+		c.HTML(http.StatusOK, "index.html", gin.H{"dirs": getFilesInfo(dir), "gitlabToken": gitlabToken, "mode": os.Getenv("GIN_MODE")})
 	})
 	r.GET("/files", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"files": getFilesInfo(dir)})
