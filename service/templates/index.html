@@ -37,8 +37,8 @@
     <!-- <div class="ui-loading"></div> -->
     <!-- 底部分页 -->
     <div class="table-page-x"></div>
-</div>
-  
+  </div>
+
 </div>
 <style>
   .content {
@@ -96,39 +96,40 @@
     </g>
   </g>
 </svg>`
-return tmpl
+    return tmpl
   }
-  
-  
+
+
   document.onreadystatechange = async (e) => {
     if (document.readyState === 'complete') {
       let projects = [];
       const gitlabApi = axios.create({
         baseURL: 'http://192.168.1.21',
         timeout: 2000,
-        headers: { 'PRIVATE-TOKEN': '{{.gitlabToken}}'}
+        headers: { 'PRIVATE-TOKEN': '{{.gitlabToken}}' }
       })
       const localApi = axios.create({
         baseURL: '',
         timeout: 2000,
       })
-      const backApi = axios.create({
-        baseURL: {{if eq .mode "release"}}'./'{{else}}'http://192.168.1.63'{{end}},
+      const backApiConfig = {
+        baseURL: '{{ if eq .mode "release" }}./{{ else }}http://192.168.1.63{{ end }}',
         timeout: 2000,
-      })
-      const backProjects = ['ae', 'eg', 'ppcw', 'dcaw', 'hm', 'perm', 'gis', 'hero', 'pmcp', 'policy', 'prisi', 'ropo']
+      }
+      const backApi = axios.create(backApiConfig);
+      const backProjects = ['ae', 'eg', 'exam', 'ppcw', 'dcaw', 'hm', 'perm', 'gis', 'hero', 'pmcp', 'policy', 'prisi', 'ropo']
       let localDirs = []
       // 获取可跳转的项目数据
       try {
         const { data } = await localApi.get('./projects');
         localDirs = data
-      } catch(e) {
-        console.log({...e})
+      } catch (e) {
+        console.log({ ...e })
       }
 
       let autoRefresh = true;
       let autoRefreshHandler = 0
-  
+
       function onAutoRefreshChange(target) {
         autoRefresh = target.checked
         clearInterval(autoRefreshHandler)
@@ -142,66 +143,72 @@ return tmpl
       window.onAutoRefreshChange = onAutoRefreshChange
 
       function isProjectCanTest(projectName) {
-        return localDirs.some((d) => d.Name===projectName)
+        return localDirs.some((d) => d.Name === projectName)
       }
 
       const table = document.querySelector('#p-table tbody')
 
       async function getPiplines(p) {
         try {
-            const { data } = await gitlabApi.get(`./api/v4/projects/${p.id}/pipelines?per_page=2`);
-            p.pipelines = data || []
-            return Promise.resolve(p.pipelines)
-          } catch (e) {
-            console.log({...e})
-            return Promise.resolve([])
-          }
+          const { data } = await gitlabApi.get(`./api/v4/projects/${p.id}/pipelines?per_page=2`);
+          p.pipelines = data || []
+          return Promise.resolve(p.pipelines)
+        } catch (e) {
+          console.log({ ...e })
+          return Promise.resolve([])
+        }
       }
 
       async function getProjects() {
         const { data } = await gitlabApi.get('./api/v4/projects/?per_page=200&with_programming_language=vue')
         projects = data || []
-        let frontEnd = projects.filter(p => ['back-end','lab'].indexOf(p.namespace.name) < 0 && !p.empty_repo && p.path)
+        let frontEnd = projects.filter(p => ['back-end', 'lab'].indexOf(p.namespace.name) < 0 && !p.empty_repo && p.path)
         await Promise.all(frontEnd.map((d) => getPiplines(d)))
         frontEnd = frontEnd.filter(d => d.pipelines && d.pipelines.length)
-        frontEnd.sort((a,b) => ('' + a.path).localeCompare(b.path));
-        
+        frontEnd.sort((a, b) => ('' + a.path).localeCompare(b.path));
+
         const newTrs = []
 
-        for(let i=0;i<frontEnd.length;i++) {
+        for (let i = 0; i < frontEnd.length; i++) {
           const p = frontEnd[i];
 
           const tr = document.createElement('tr')
-            const tdName = document.createElement('td')
-            if (isProjectCanTest(p.path)) {
-              const link = document.createElement('a')
-              link.href = p.path
-              link.target = '_blank'
-              link.innerText = p.path
-              tdName.appendChild(link)
+          const tdName = document.createElement('td')
+          if (isProjectCanTest(p.path)) {
+            const link = document.createElement('a')
+            link.href = p.path
+            link.target = '_blank'
+            link.innerText = p.path
+            tdName.appendChild(link)
+          } else {
+            tdName.innerText = p.path
+          }
+          const tdDesc = document.createElement('td')
+          tdDesc.innerText = p.description
+          const tdPackageUpdatedTime = document.createElement('td')
+          const tdPackageStatus = document.createElement('td')
+
+          const last = p.pipelines[0]
+          tdPackageUpdatedTime.innerText = dayjs(last.updated_at).format('YYYY-MM-DD HH:mm:ss');
+          tdPackageStatus.innerHTML = createBadage(last.status);
+          const tdBackStatus = document.createElement('td')
+          try {
+            const backNameIndex = backProjects.findIndex(d => p.path.indexOf(d) > -1)
+            console.log(p.path)
+            if (p.path === 'hm') {
+              const { data } = await backApi.get(`./${backProjects[backNameIndex]}/org/softConfig/get`)
+              tdBackStatus.innerHTML = `<span class="green">正常</span>`
             } else {
-              tdName.innerText = p.path
-            }
-            const tdDesc = document.createElement('td')
-            tdDesc.innerText = p.description
-            const tdPackageUpdatedTime = document.createElement('td')
-            const tdPackageStatus = document.createElement('td')
-            
-            const last = p.pipelines[0]
-            tdPackageUpdatedTime.innerText = dayjs(last.updated_at).format('YYYY-MM-DD HH:mm:ss');
-            tdPackageStatus.innerHTML = createBadage(last.status);
-            const tdBackStatus = document.createElement('td')
-            try {
-              const backNameIndex = backProjects.findIndex(d=> p.path.indexOf(d) > -1)
               const { data } = await backApi.get(`./${backProjects[backNameIndex]}/version/get`)
               p.backApiVersion = data;
               tdBackStatus.innerHTML = `<span class="green">正常（svn：${data.version}）</span>`
-            } catch(e) {
-              p.backApiVersion = {};
-              tdBackStatus.innerHTML = '<span class="red">挂了（或未配置）</span>'
             }
-            tr.append(tdName, tdDesc, tdPackageUpdatedTime, tdPackageStatus, tdBackStatus)
-            newTrs.push(tr)
+          } catch (e) {
+            p.backApiVersion = {};
+            tdBackStatus.innerHTML = '<span class="red">挂了（或未配置）</span>'
+          }
+          tr.append(tdName, tdDesc, tdPackageUpdatedTime, tdPackageStatus, tdBackStatus)
+          newTrs.push(tr)
         }
         const oldTrs = document.querySelectorAll('#p-table tbody tr');
         if (oldTrs) {
@@ -218,7 +225,7 @@ return tmpl
         return data
       }
 
-      onAutoRefreshChange({checked: true})
+      onAutoRefreshChange({ checked: true })
     }
   }
   // document.querySelector()
