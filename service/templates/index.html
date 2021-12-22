@@ -113,9 +113,10 @@
         timeout: 2000,
       })
       const backApiConfig = {
-        baseURL: '{{ if eq .mode "release" }}./{{ else }}http://192.168.1.63{{ end }}',
+        baseURL: '{{ if eq .mode "release" }}./{{ else }}http://test.findsoft.com.cn{{ end }}',
         timeout: 2000,
       }
+
       const backApi = axios.create(backApiConfig);
       const backProjects = ['ae', 'eg', 'exam', 'ppcw', 'dcaw', 'hm', 'perm', 'gis', 'hero', 'pmcp', 'policy', 'prisi', 'ropo']
       let localDirs = []
@@ -197,11 +198,15 @@
             console.log(p.path)
             if (p.path === 'hm') {
               const { data } = await backApi.get(`./${backProjects[backNameIndex]}/org/softConfig/get`)
-              tdBackStatus.innerHTML = `<span class="green">正常</span>`
+              tdBackStatus.innerHTML = `<span class="green">正常(没有version接口)</span>`
             } else {
               const { data } = await backApi.get(`./${backProjects[backNameIndex]}/version/get`)
               p.backApiVersion = data;
-              tdBackStatus.innerHTML = `<span class="green">正常（svn：${data.version}）</span>`
+              if (data.version.length > 40) {
+                console.log({version: data.version})
+                data.version = '太长不看(格式错误)';
+              }
+              tdBackStatus.innerHTML = `<span class="green">正常（svn：${data.version.length > 10 ? data.version.substr(0,7) : data.version}）</span>`
             }
           } catch (e) {
             p.backApiVersion = {};
@@ -228,5 +233,4 @@
       onAutoRefreshChange({ checked: true })
     }
   }
-  // document.querySelector()
 </script>
