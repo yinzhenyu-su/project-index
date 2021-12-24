@@ -24,6 +24,7 @@
           <td>打包时间</td>
           <td>打包状态</td>
           <td>后端状态</td>
+          <td>swagger</td>
         </tr>
       </thead>
       <tbody>
@@ -175,13 +176,21 @@
 
           const tr = document.createElement('tr')
           const tdName = document.createElement('td')
+          const tdSwagger = document.createElement('td')
           if (isProjectCanTest(p.path)) {
             const link = document.createElement('a')
             link.href = p.path
             link.target = '_blank'
             link.innerText = p.path
             tdName.appendChild(link)
+
+            
+            const linkSwagger = link.cloneNode()
+            linkSwagger.href = `${p.path}/swagger-ui.html`
+            linkSwagger.innerText = '点我前往'
+            tdSwagger.appendChild(linkSwagger)
           } else {
+            tdSwagger.innerText = '未配置'
             tdName.innerText = p.path
           }
           const tdDesc = document.createElement('td')
@@ -198,7 +207,7 @@
             console.log(p.path)
             if (p.path === 'hm') {
               const { data } = await backApi.get(`./${backProjects[backNameIndex]}/org/softConfig/get`)
-              tdBackStatus.innerHTML = `<span class="green">正常(没有version接口)</span>`
+              tdBackStatus.innerHTML = `<span class="green">正常（没有version接口）</span>`
             } else {
               const { data } = await backApi.get(`./${backProjects[backNameIndex]}/version/get`)
               p.backApiVersion = data;
@@ -212,7 +221,7 @@
             p.backApiVersion = {};
             tdBackStatus.innerHTML = '<span class="red">挂了（或未配置）</span>'
           }
-          tr.append(tdName, tdDesc, tdPackageUpdatedTime, tdPackageStatus, tdBackStatus)
+          tr.append(tdName, tdDesc, tdPackageUpdatedTime, tdPackageStatus, tdBackStatus, tdSwagger)
           newTrs.push(tr)
         }
         const oldTrs = document.querySelectorAll('#p-table tbody tr');
