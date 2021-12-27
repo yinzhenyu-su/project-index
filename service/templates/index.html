@@ -145,7 +145,7 @@
       window.onAutoRefreshChange = onAutoRefreshChange
 
       function isProjectCanTest(projectName) {
-        return localDirs.some((d) => d.Name === projectName)
+        return localDirs.some((d) => d.Name === projectName) || projectName === 'policy_html'
       }
 
       const table = document.querySelector('#p-table tbody')
@@ -187,6 +187,13 @@
             
             const linkSwagger = link.cloneNode()
             linkSwagger.href = `${p.path}/swagger-ui.html`
+            if (p.path === 'hm') {
+              linkSwagger.href = `${p.path}/org/swagger-ui.html`
+            }
+            if (p.path === 'policy_html') {
+              link.href = 'policy'
+              linkSwagger.href = 'policy/swagger-ui.html'
+            }
             linkSwagger.innerText = '点我前往'
             tdSwagger.appendChild(linkSwagger)
           } else {
