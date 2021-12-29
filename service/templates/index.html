@@ -44,7 +44,7 @@
 <style>
   .content {
     display: block;
-    width: 50%;
+    width: 60%;
     text-align: center;
     margin: auto;
   }
@@ -145,7 +145,11 @@
       window.onAutoRefreshChange = onAutoRefreshChange
 
       function isProjectCanTest(projectName) {
-        return localDirs.some((d) => d.Name === projectName) || projectName === 'policy_html'
+        let project = projectName;
+        if (projectName === 'policy_html') {
+          project = 'policy'
+        }
+        return localDirs.some((d) => d.Name === project)
       }
 
       const table = document.querySelector('#p-table tbody')
@@ -218,11 +222,7 @@
             } else {
               const { data } = await backApi.get(`./${backProjects[backNameIndex]}/version/get`)
               p.backApiVersion = data;
-              if (data.version.length > 40) {
-                console.log({version: data.version})
-                data.version = '太长不看(格式错误)';
-              }
-              tdBackStatus.innerHTML = `<span class="green">正常（svn：${data.version.length > 10 ? data.version.substr(0,7) : data.version}）</span>`
+              tdBackStatus.innerHTML = `<span class="green" title="版本号：${data.version}">正常</span>`
             }
           } catch (e) {
             p.backApiVersion = {};

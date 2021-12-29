@@ -47,12 +47,13 @@ func ParseTime(t time.Time) string {
 }
 
 func Router(gitlabToken string, dir string) {
+	var GIN_MODE = os.Getenv("GIN_MODE")
 	r := gin.Default()
 	templ := template.Must(template.New("").ParseFS(f, "templates/*"))
 	r.SetHTMLTemplate(templ)
 	r.SetFuncMap(template.FuncMap{"parseTime": ParseTime})
 	r.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "index.html", gin.H{"dirs": getFilesInfo(dir), "gitlabToken": gitlabToken, "mode": os.Getenv("GIN_MODE")})
+		c.HTML(http.StatusOK, "index.html", gin.H{"dirs": getFilesInfo(dir), "gitlabToken": gitlabToken, "mode": GIN_MODE})
 	})
 	r.GET("/files", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"files": getFilesInfo(dir)})
