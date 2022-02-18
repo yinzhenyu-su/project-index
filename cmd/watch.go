@@ -19,22 +19,26 @@ import (
 	"project-index/service"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // watchCmd represents the watch command
 var watchCmd = &cobra.Command{
-	Use:   "watch <gitlab api token> -d <watch directory>",
+	Use:   "watch -t <gitlab api token> -d <watch directory>",
 	Short: "展示Gitlab项目状态",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			cmd.Println(cmd.UsageString())
 		} else {
-			directory, err := cmd.Flags().GetString("directory")
-			if err != nil {
+			directory, dirErr := cmd.Flags().GetString("directory")
+			token, tokenErr := cmd.Flags().GetString("token")
+			if dirErr != nil || tokenErr != nil {
 				cmd.Println(cmd.UsageString())
+			} else {
+				service.Router(token, directory)
 			}
-			service.Router(string(args[0]), directory)
+
 		}
 	},
 }
@@ -51,4 +55,10 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	watchCmd.Flags().StringP("directory", "d", "", "watch directory")
+	watchCmd.Flags().StringP("token", "t", "", "gitlab api token")
+	var dir = viper.GetString("watch.directory")
+	var token = viper.GetString("watch.token")
+	if token != "" && dir != "" {
+		service.Router(token, dir)
+	}
 }
