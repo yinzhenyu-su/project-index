@@ -105,7 +105,7 @@
     if (document.readyState === 'complete') {
       let projects = [];
       const gitlabApi = axios.create({
-        baseURL: 'http://192.168.1.21',
+        baseURL: '',
         timeout: 2000,
         headers: { 'PRIVATE-TOKEN': '{{.gitlabToken}}' }
       })
