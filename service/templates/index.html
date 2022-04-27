@@ -114,7 +114,7 @@
         timeout: 2000,
       })
       const backApiConfig = {
-        baseURL: '{{ if eq .mode "release" }}./{{ else }}http://test.findsoft.com.cn{{ end }}',
+        baseURL: '',
         timeout: 2000,
       }
 
@@ -148,6 +148,9 @@
         let project = projectName;
         if (projectName === 'policy_html') {
           project = 'policy'
+        }
+        if (projectName === 'damocles_html') {
+          project = 'damocles'
         }
         return localDirs.some((d) => d.Name === project)
       }
@@ -197,6 +200,10 @@
             if (p.path === 'policy_html') {
               link.href = 'policy'
               linkSwagger.href = 'policy/swagger-ui.html'
+            }
+            if (p.path === 'damocles_html') {
+              link.href = 'damocles'
+              linkSwagger.href = 'damocles/swagger-ui.html'
             }
             linkSwagger.innerText = '点我前往'
             tdSwagger.appendChild(linkSwagger)
